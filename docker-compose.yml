@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: shero-postgres
+    environment:
+      POSTGRES_DB: shero_db
+      POSTGRES_USER: shero
+      POSTGRES_PASSWORD: shero123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
