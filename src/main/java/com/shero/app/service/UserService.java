@@ -11,6 +11,9 @@ import com.shero.app.mapper.UserMapper;
 import com.shero.app.repository.UserRepository;
 import com.shero.app.security.JwtService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -30,17 +33,23 @@ public class UserService {
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
 
-    public UserResponse getUserById(Long id) {
-        return userRepository.findById(id)
-                .map(userMapper::toResponse)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
+    public UserResponse getCurrentUserProfile() {
+        return userMapper.toResponse(getCurrentAuthenticatedUser());
     }
 
-    public List<UserResponse> getAllUsers() {
+    public List<UserResponse> getAllUsersForAdmin() {
+        ensureAdmin();
         return userRepository.findAll()
                 .stream()
                 .map(userMapper::toResponse)
                 .toList();
+    }
+
+    public UserResponse getUserByIdForAdmin(Long id) {
+        ensureAdmin();
+        return userRepository.findById(id)
+                .map(userMapper::toResponse)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
     }
 
     @Transactional
@@ -94,9 +103,44 @@ public class UserService {
     }
 
     @Transactional
-    public void deleteUser(Long id) {
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
+    public void deleteCurrentUser() {
+        userRepository.delete(getCurrentAuthenticatedUser());
+    }
+
+    @Transactional
+    public void deleteUserForAdmin(Long id) {
+        ensureAdmin();
+        User user = findUserById(id);
         userRepository.delete(user);
+    }
+
+    private User findUserById(Long id) {
+        return userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
+    }
+
+    private void ensureAdmin() {
+        if (!isAdmin(getCurrentAuthenticatedUser())) {
+            throw new AccessDeniedException("Only admins can access this resource.");
+        }
+    }
+
+    private boolean isAdmin(User user) {
+        return user.getRole() == Role.ADMIN;
+    }
+
+    private User getCurrentAuthenticatedUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || authentication.getPrincipal() == null) {
+            throw new AccessDeniedException("Authentication required.");
+        }
+
+        Object principal = authentication.getPrincipal();
+        String email = principal instanceof UserDetails userDetails
+                ? userDetails.getUsername()
+                : principal.toString();
+
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("Authenticated user not found."));
     }
 }

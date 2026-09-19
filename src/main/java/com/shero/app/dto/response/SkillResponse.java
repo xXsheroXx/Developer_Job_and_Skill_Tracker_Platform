@@ -5,6 +5,7 @@ import com.shero.app.entity.enums.SkillCategory;
 public record SkillResponse(
         Long id,
         String name,
-        SkillCategory category
+        SkillCategory category,
+        Long createdById
 ) {
 }

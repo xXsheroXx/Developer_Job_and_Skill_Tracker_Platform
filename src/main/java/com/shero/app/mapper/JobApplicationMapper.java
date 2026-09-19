@@ -13,5 +13,6 @@ public interface JobApplicationMapper {
     @Mapping(source = "user.id", target = "userId")
     JobApplicationResponse toResponse(JobApplication application);
 
+    @Mapping(source = "createdBy.id", target = "createdById")
     SkillResponse toSkillResponse(Skill skill);
 }

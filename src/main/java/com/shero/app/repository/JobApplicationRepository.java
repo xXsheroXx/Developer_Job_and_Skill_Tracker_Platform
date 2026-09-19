@@ -11,8 +11,8 @@ import java.util.List;
 
 public interface JobApplicationRepository extends JpaRepository<JobApplication, Long> {
 
+    List<JobApplication> findByStatus(ApplicationStatus status);
     List<JobApplication> findByUserId(Long userId);
-
     List<JobApplication> findByUserIdAndStatus(Long userId, ApplicationStatus status);
 
     @Modifying
